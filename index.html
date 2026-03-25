@@ -2,94 +2,73 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Circled Cross Lodge</title>
+<title>Circled Cross Lodge — GOD MODE</title>
 
 <style>
-body {
-background:#000;
-color:#eee;
-font-family:Arial;
-text-align:center;
-}
-
-h1 {color:gold;}
+body {background:#000;color:#eee;font-family:Georgia;text-align:center;}
+h1 {color:gold;text-shadow:0 0 20px gold;}
 
 button {
 padding:10px;margin:5px;
 background:#111;color:#fff;
 border:1px solid gold;
-cursor:pointer;
 }
 
-#tree {
-position:relative;
-width:600px;
-height:820px;
-margin:auto;
-}
+svg {display:block;margin:auto;}
+
+.line {stroke:white;stroke-width:2;}
+.glow {stroke:gold !important;stroke-width:4;}
 
 .node {
-position:absolute;
-width:70px;height:70px;
-border-radius:50%;
-display:flex;
-align-items:center;
-justify-content:center;
-border:2px solid gold;
-background:gold;
-color:#000;
-font-size:11px;
+fill:gold;
 cursor:pointer;
-}
-
-.line {
-position:absolute;
-width:2px;
-background:#aaa;
-transform-origin:top;
-}
-
-#info {
-margin-top:15px;
-padding:10px;
-background:#111;
-min-height:120px;
 }
 
 .grid {
 display:grid;
-grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
-gap:10px;
-padding:20px;
+grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+gap:10px;padding:20px;
 }
 
-.card {background:#111;padding:10px;}
-.card img {width:100%;}
-.rune {font-size:40px;color:gold;}
+.card {
+background:#111;
+padding:10px;
+border:1px solid gold;
+cursor:pointer;
+}
 
-#tarotPage,#runesPage,#quizPage {display:none;}
+.card img {width:100%;}
+
+#tarotPage,#quizPage {display:none;}
+
+#info {
+background:#111;
+padding:12px;
+margin-top:10px;
+min-height:140px;
+border-top:1px solid gold;
+}
 </style>
 </head>
 
 <body>
 
-<h1>Circled Cross Lodge</h1>
+<h1>Circled Cross Lodge — God Mode</h1>
 
 <button onclick="show('treePage')">Tree</button>
 <button onclick="show('tarotPage')">Tarot</button>
-<button onclick="show('runesPage')">Runes</button>
 <button onclick="startQuiz()">Quiz</button>
+<button onclick="toggleSound()">Sound</button>
 
 <div id="treePage">
-<div id="tree"></div>
-<div id="info">Click a Sephirah</div>
+<svg width="600" height="820" id="tree"></svg>
+<div id="info">Click a sphere or path</div>
 </div>
 
 <div id="tarotPage"><div id="tarot" class="grid"></div></div>
-<div id="runesPage"><div id="runes" class="grid"></div></div>
 
 <div id="quizPage">
-<h2>Quiz</h2>
+<h2>Initiation Quiz</h2>
 <div id="q"></div>
 <div id="answers"></div>
 <div id="score"></div>
@@ -97,150 +76,158 @@ padding:20px;
 
 <script>
 
-// ---------------- TREE ----------------
-const pos = [
-[300,40],
-[150,160],[450,160],
-[150,320],[450,320],[300,320],
+// ---------- SOUND ----------
+let sound=false,ctx;
+function toggleSound(){
+sound=!sound;
+if(sound) ctx=new (window.AudioContext||window.webkitAudioContext)();
+}
+function tone(f){
+if(!sound) return;
+let o=ctx.createOscillator(),g=ctx.createGain();
+o.connect(g);g.connect(ctx.destination);
+o.frequency.value=f;o.start();
+g.gain.exponentialRampToValueAtTime(0.0001,ctx.currentTime+1);
+}
+
+// ---------- TREE POS ----------
+const pos=[
+[300,50],[150,170],[450,170],
+[150,330],[450,330],[300,330],
 [180,520],[420,520],
 [300,660],[300,780]
 ];
 
-const names=[
-"Kether","Chokmah","Binah",
-"Chesed","Geburah","Tiphereth",
-"Netzach","Hod","Yesod","Malkuth"
+// ---------- FULL SEPHIROTH (YOUR SYSTEM) ----------
+const seph=[
+["Kether","Eheieh","Metatron","White w/ gold flecks","Crown",
+"Pure being. Source beyond form."],
+
+["Chokmah","Yah","Ratziel","Grey","Left neck",
+"Dynamic force. Raw creative impulse."],
+
+["Binah","Jehovah Elohim","Tzaphkiel","Black","Right neck",
+"Structure and form. The great womb."],
+
+["Chesed","El","Tzadkiel","Blue","Left shoulder",
+"Mercy, expansion, rulership."],
+
+["Geburah","Elohim Gibor","Chamael","Red","Right shoulder",
+"Severity, discipline, destruction."],
+
+["Tiphereth","Jehovah Eloah","Michael","Gold","Heart",
+"Balance, higher self, solar consciousness."],
+
+["Netzach","Jehovah Sabaoth","Auriel","Green","Left hip",
+"Emotion, desire, instinct."],
+
+["Hod","Elohim Tzabaoth","Raphael","Orange","Right hip",
+"Intellect, language, structure."],
+
+["Yesod","Shaddai","Gabriel","Violet","Pelvis",
+"Subconscious, dreams, gateway."],
+
+["Malkuth","Adonai Malek","Sandalphon","Earth tones","Feet",
+"Material world, manifestation."]
 ];
 
-const tree=document.getElementById("tree");
-
-// correct connections
+// ---------- PATHS + TAROT ----------
 const paths=[
-[0,1],[0,2],[1,2],
-[1,3],[2,4],
-[3,5],[4,5],
-[1,5],[2,5],
-[3,4],
-[5,6],[5,7],
-[6,7],
-[6,8],[7,8],
-[8,9],
-[3,6],[4,7],
-[5,8],
-[2,6],[1,7],
-[0,5]
+[0,1,"א","Fool"],[0,2,"ב","Magician"],
+[1,2,"ג","High Priestess"],[1,3,"ד","Empress"],
+[2,4,"ה","Emperor"],[3,5,"ו","Hierophant"],
+[4,5,"ז","Lovers"],[1,5,"ח","Chariot"],
+[2,5,"ט","Strength"],[3,4,"י","Hermit"],
+[5,6,"כ","Wheel"],[5,7,"ל","Justice"],
+[6,7,"מ","Hanged Man"],[6,8,"נ","Death"],
+[7,8,"ס","Temperance"],[8,9,"ע","Devil"],
+[3,6,"פ","Tower"],[4,7,"צ","Star"],
+[5,8,"ק","Moon"],[2,6,"ר","Sun"],
+[1,7,"ש","Judgement"],[0,5,"ת","World"]
 ];
 
-// draw lines
-paths.forEach(p=>{
-let x1=pos[p[0]][0]+35;
-let y1=pos[p[0]][1]+35;
-let x2=pos[p[1]][0]+35;
-let y2=pos[p[1]][1]+35;
+const svg=document.getElementById("tree");
+let lines=[];
 
-let dx=x2-x1;
-let dy=y2-y1;
-let len=Math.sqrt(dx*dx+dy*dy);
-let ang=Math.atan2(dy,dx)*180/Math.PI;
+// draw paths
+paths.forEach((p,i)=>{
+let l=document.createElementNS("http://www.w3.org/2000/svg","line");
+l.setAttribute("x1",pos[p[0]][0]);
+l.setAttribute("y1",pos[p[0]][1]);
+l.setAttribute("x2",pos[p[1]][0]);
+l.setAttribute("y2",pos[p[1]][1]);
+l.setAttribute("class","line");
 
-let l=document.createElement("div");
-l.className="line";
-l.style.height=len+"px";
-l.style.left=x1+"px;
-l.style.top=y1+"px";
-l.style.transform="rotate("+ang+"deg)";
-tree.appendChild(l);
+l.onclick=()=>{
+clearGlow();
+l.classList.add("glow");
+tone(200+i*20);
+
+info.innerHTML=`<b>Path ${p[2]}</b><br>
+Tarot: ${p[3]}`;
+};
+
+svg.appendChild(l);
+lines.push(l);
+
+// Hebrew letter
+let t=document.createElementNS("http://www.w3.org/2000/svg","text");
+t.setAttribute("x",(pos[p[0]][0]+pos[p[1]][0])/2);
+t.setAttribute("y",(pos[p[0]][1]+pos[p[1]][1])/2);
+t.textContent=p[2];
+svg.appendChild(t);
 });
 
 // nodes
-names.forEach((n,i)=>{
-let d=document.createElement("div");
-d.className="node";
-d.style.left=pos[i][0]+"px";
-d.style.top=pos[i][1]+"px";
-d.innerText=n;
+pos.forEach((p,i)=>{
+let c=document.createElementNS("http://www.w3.org/2000/svg","circle");
+c.setAttribute("cx",p[0]);
+c.setAttribute("cy",p[1]);
+c.setAttribute("r",28);
+c.setAttribute("class","node");
 
-d.onclick=()=>{
-document.getElementById("info").innerHTML =
-"<b>"+n+"</b>";
+c.onclick=()=>{
+let d=seph[i];
+info.innerHTML=
+`<b>${d[0]}</b><br>
+Divine: ${d[1]}<br>
+Archangel: ${d[2]}<br>
+Colour: ${d[3]}<br>
+Body: ${d[4]}<br><br>${d[5]}`;
+tone(150+i*20);
 };
 
-tree.appendChild(d);
+svg.appendChild(c);
 });
 
-// ---------------- TAROT ----------------
+function clearGlow(){lines.forEach(l=>l.classList.remove("glow"));}
+
+// ---------- TAROT ----------
 const tarot=[
-["Fool","https://upload.wikimedia.org/wikipedia/commons/thumb/d/d0/RWS_Tarot_00_Fool.jpg/200px-RWS_Tarot_00_Fool.jpg","New beginnings, leap of faith, divine innocence"],
-["Magician","https://upload.wikimedia.org/wikipedia/commons/thumb/d/d3/RWS_Tarot_01_Magician.jpg/200px-RWS_Tarot_01_Magician.jpg","Manifestation, willpower, directing energy"],
-["High Priestess","https://upload.wikimedia.org/wikipedia/commons/thumb/8/88/RWS_Tarot_02_High_Priestess.jpg/200px-RWS_Tarot_02_High_Priestess.jpg","Intuition, hidden knowledge, subconscious"],
-["Empress","https://upload.wikimedia.org/wikipedia/commons/thumb/d/d2/RWS_Tarot_03_Empress.jpg/200px-RWS_Tarot_03_Empress.jpg","Creation, fertility, nurturing"],
-["Emperor","https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/RWS_Tarot_04_Emperor.jpg/200px-RWS_Tarot_04_Emperor.jpg","Authority, structure, leadership"],
-["Hierophant","https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/RWS_Tarot_05_Hierophant.jpg/200px-RWS_Tarot_05_Hierophant.jpg","Tradition, spiritual teaching"],
-["Lovers","https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/TheLovers.jpg/200px-TheLovers.jpg","Union, choice, alignment"],
-["Chariot","https://upload.wikimedia.org/wikipedia/commons/thumb/9/9b/RWS_Tarot_07_Chariot.jpg/200px-RWS_Tarot_07_Chariot.jpg","Victory, control, determination"],
-["Strength","https://upload.wikimedia.org/wikipedia/commons/thumb/f/f5/RWS_Tarot_08_Strength.jpg/200px-RWS_Tarot_08_Strength.jpg","Inner strength, courage"],
-["Hermit","https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/RWS_Tarot_09_Hermit.jpg/200px-RWS_Tarot_09_Hermit.jpg","Wisdom, introspection"],
-["Wheel","https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/RWS_Tarot_10_Wheel_of_Fortune.jpg/200px-RWS_Tarot_10_Wheel_of_Fortune.jpg","Cycles, fate, change"],
-["Justice","https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/RWS_Tarot_11_Justice.jpg/200px-RWS_Tarot_11_Justice.jpg","Balance, truth"],
-["Hanged Man","https://upload.wikimedia.org/wikipedia/commons/thumb/2/2b/RWS_Tarot_12_Hanged_Man.jpg/200px-RWS_Tarot_12_Hanged_Man.jpg","Surrender, new perspective"],
-["Death","https://upload.wikimedia.org/wikipedia/commons/thumb/d/d7/RWS_Tarot_13_Death.jpg/200px-RWS_Tarot_13_Death.jpg","Transformation, endings"],
-["Temperance","https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/RWS_Tarot_14_Temperance.jpg/200px-RWS_Tarot_14_Temperance.jpg","Harmony, balance"],
-["Devil","https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/RWS_Tarot_15_Devil.jpg/200px-RWS_Tarot_15_Devil.jpg","Attachment, illusion"],
-["Tower","https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/RWS_Tarot_16_Tower.jpg/200px-RWS_Tarot_16_Tower.jpg","Sudden change, upheaval"],
-["Star","https://upload.wikimedia.org/wikipedia/commons/thumb/d/db/RWS_Tarot_17_Star.jpg/200px-RWS_Tarot_17_Star.jpg","Hope, guidance"],
-["Moon","https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/RWS_Tarot_18_Moon.jpg/200px-RWS_Tarot_18_Moon.jpg","Illusion, subconscious"],
-["Sun","https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/RWS_Tarot_19_Sun.jpg/200px-RWS_Tarot_19_Sun.jpg","Success, vitality"],
-["Judgement","https://upload.wikimedia.org/wikipedia/commons/thumb/d/dd/RWS_Tarot_20_Judgement.jpg/200px-RWS_Tarot_20_Judgement.jpg","Awakening, rebirth"],
-["World","https://upload.wikimedia.org/wikipedia/commons/thumb/f/ff/RWS_Tarot_21_World.jpg/200px-RWS_Tarot_21_World.jpg","Completion, wholeness"]
+"Fool","Magician","High Priestess","Empress","Emperor","Hierophant",
+"Lovers","Chariot","Strength","Hermit","Wheel","Justice",
+"Hanged Man","Death","Temperance","Devil","Tower","Star",
+"Moon","Sun","Judgement","World"
 ];
 
-tarot.forEach(t=>{
+tarot.forEach((t,i)=>{
 let c=document.createElement("div");
 c.className="card";
-c.innerHTML=`<img src="${t[1]}" onerror="this.style.display='none'">
-<h4>${t[0]}</h4>
-<p>${t[2]}</p>`;
-document.getElementById("tarot").appendChild(c);
+
+c.innerHTML=`<img src="https://via.placeholder.com/200x300?text=${t}">
+<h4>${t}</h4>`;
+
+c.onclick=()=>{
+clearGlow();
+lines[i].classList.add("glow");
+show("treePage");
+tone(300+i*20);
+};
+
+tarotDiv.appendChild(c);
 });
 
-// ---------------- RUNES ----------------
-const runes=[
-["ᚠ","Fehu","Wealth, flow, moving energy"],
-["ᚢ","Uruz","Strength, primal force"],
-["ᚦ","Thurisaz","Protection, conflict"],
-["ᚨ","Ansuz","Wisdom, communication"],
-["ᚱ","Raidho","Journey, movement"],
-["ᚲ","Kenaz","Knowledge, illumination"],
-["ᚷ","Gebo","Gift, exchange"],
-["ᚹ","Wunjo","Joy, harmony"],
-["ᚺ","Hagalaz","Disruption, change"],
-["ᚾ","Nauthiz","Need, resistance"],
-["ᛁ","Isa","Stillness, pause"],
-["ᛃ","Jera","Cycles, harvest"],
-["ᛇ","Eihwaz","Endurance, transformation"],
-["ᛈ","Perthro","Mystery, fate"],
-["ᛉ","Algiz","Protection, higher self"],
-["ᛋ","Sowilo","Success, vitality"],
-["ᛏ","Tiwaz","Victory, honour"],
-["ᛒ","Berkano","Growth, birth"],
-["ᛖ","Ehwaz","Movement, trust"],
-["ᛗ","Mannaz","Self, humanity"],
-["ᛚ","Laguz","Flow, intuition"],
-["ᛜ","Ingwaz","Potential, gestation"],
-["ᛞ","Dagaz","Breakthrough, awakening"],
-["ᛟ","Othala","Heritage, legacy"]
-];
-
-runes.forEach(r=>{
-let c=document.createElement("div");
-c.className="card";
-c.innerHTML=`<div class="rune">${r[0]}</div>
-<h4>${r[1]}</h4>
-<p>${r[2]}</p>`;
-document.getElementById("runes").appendChild(c);
-});
-
-// ---------------- QUIZ ----------------
+// ---------- QUIZ ----------
 let score=0;
 
 function startQuiz(){
@@ -251,30 +238,37 @@ nextQ();
 
 function nextQ(){
 let q=tarot[Math.floor(Math.random()*tarot.length)];
+qDiv.innerHTML=`Which card is: <b>${q}</b>?`;
 
-document.getElementById("q").innerHTML =
-"<b>Which card matches this meaning?</b><br>"+q[2];
+let opts=[q,...tarot.sort(()=>Math.random()-0.5).slice(0,3)];
 
-let options=[q,...tarot.sort(()=>Math.random()-0.5).slice(0,3)];
-
-let html="";
-options.forEach(o=>{
-html+=`<button onclick="answer('${o[0]}','${q[0]}')">${o[0]}</button>`;
-});
-
-document.getElementById("answers").innerHTML=html;
-}
-
-function answer(a,b){
-if(a===b) score++;
-document.getElementById("score").innerText="Score: "+score;
+answers.innerHTML="";
+opts.forEach(o=>{
+let b=document.createElement("button");
+b.innerText=o;
+b.onclick=()=>{
+if(o===q) score++;
+scoreDiv.innerText="Score: "+score;
 nextQ();
+};
+answers.appendChild(b);
+});
 }
 
+// ---------- NAV ----------
 function show(p){
-["treePage","tarotPage","runesPage","quizPage"].forEach(x=>document.getElementById(x).style.display="none");
+treePage.style.display="none";
+tarotPage.style.display="none";
+quizPage.style.display="none";
 document.getElementById(p).style.display="block";
 }
+
+// refs
+const info=document.getElementById("info");
+const tarotDiv=document.getElementById("tarot");
+const qDiv=document.getElementById("q");
+const answers=document.getElementById("answers");
+const scoreDiv=document.getElementById("score");
 
 </script>
 
